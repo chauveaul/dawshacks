@@ -10,6 +10,14 @@ import (
 	"github.com/gordonklaus/portaudio"
 )
 
+type song struct {
+	SongId       string `json:"id"`
+	Title        string `json:"title"`
+	Artist       string `json:"artist"`
+	AlbumPicture []byte `json:"album_picture"`
+	Duration     int    `json:"duration"`
+}
+
 func main() {
 	router := gin.Default()
 	router.GET("/", ripMusic)
