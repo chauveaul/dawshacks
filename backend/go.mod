@@ -2,7 +2,10 @@ module meze/dawshacks
 
 go 1.22.6
 
-require github.com/gin-gonic/gin v1.10.0
+require (
+	github.com/gin-gonic/gin v1.10.0
+	github.com/gordonklaus/portaudio v0.0.0-20250206071425-98a94950218b
+)
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect
