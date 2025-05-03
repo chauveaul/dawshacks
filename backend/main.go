@@ -2,7 +2,10 @@ package main
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/signal"
 
@@ -20,12 +23,67 @@ type song struct {
 
 func main() {
 	router := gin.Default()
+	
+	// Set up CORS
+	router.Use(corsMiddleware())
+	
 	router.GET("/", ripMusic)
+	router.POST("/queue", queueSong)
 
 	err := router.Run("localhost:8080")
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+
+// Middleware to enable CORS for the frontend
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// Handler for queueing a song and storing its metadata
+func queueSong(c *gin.Context) {
+	var songData song
+	
+	// Bind the JSON body to the song struct
+	if err := c.ShouldBindJSON(&songData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid song data"})
+		return
+	}
+	
+	// Print the received song data for debugging
+	fmt.Printf("Received song: %s by %s (ID: %s, Duration: %d seconds)\n", 
+		songData.Title, songData.Artist, songData.SongId, songData.Duration)
+	
+	// Save the metadata to a file
+	fileName := fmt.Sprintf("metadata_%s.json", songData.SongId)
+	metadataBytes, err := json.Marshal(songData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process metadata"})
+		return
+	}
+	
+	err = ioutil.WriteFile(fileName, metadataBytes, 0644)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save metadata"})
+		return
+	}
+	
+	// Start recording when a song is queued
+	go ripMusic(c)
+	
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Song queued and recording started"})
 }
 
 func ripMusic(c *gin.Context) {

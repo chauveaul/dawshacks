@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AppleMusicUserData, SearchResult } from '../lib/apple-music';
 import { ChevronLeft, ChevronRight, Search, User, Music, Play, Loader2, ListMusic } from 'lucide-react';
 import { BlurFade } from "@/components/magicui/blur-fade";
+import QueueSongButton from './QueueSongButton';
 
 interface MusicDashboardProps {
   musicData: AppleMusicUserData | null;
@@ -156,7 +157,6 @@ export default function MusicDashboard({ musicData, onLogout }: MusicDashboardPr
           <div 
             key={index} 
             className="cursor-pointer"
-            onClick={() => router.push(`/songs/${item.id}`)}
           >
             <BlurFade delay={index * 0.1} direction={index % 2 === 0 ? "right" : "left"} inView>
               <div className="flex flex-col gap-2 group">
@@ -172,26 +172,32 @@ export default function MusicDashboard({ musicData, onLogout }: MusicDashboardPr
                         onError={(e) => {
                           // Use a fallback for image loading errors
                           const target = e.target as HTMLImageElement;
-                          const parent = target.parentNode as HTMLDivElement;
-                          target.style.display = 'none';
-                          
-                          // Create a fallback element
-                          const fallback = document.createElement('div');
-                          fallback.className = 'w-full h-full flex items-center justify-center bg-zinc-200 dark:bg-zinc-800';
-                          
-                          // Add a music icon
-                          const icon = document.createElement('div');
-                          icon.className = 'text-zinc-400';
-                          icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
-                          
-                          fallback.appendChild(icon);
-                          parent.appendChild(fallback);
+                          target.onerror = null; // Prevent infinite loop
+                          target.style.display = 'none'; // Hide the img tag
+                          const parent = target.parentElement;
+                          if (parent) {
+                            const fallback = document.createElement('div');
+                            fallback.className = 'w-full h-full flex items-center justify-center bg-zinc-200 dark:bg-zinc-800';
+                            
+                            const icon = document.createElement('div');
+                            icon.className = 'text-zinc-400';
+                            icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
+                            
+                            fallback.appendChild(icon);
+                            parent.appendChild(fallback);
+                          }
                         }}
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <Button size="icon" className="rounded-full h-12 w-12 bg-white/90 hover:bg-white text-black shadow-lg transform scale-0 group-hover:scale-100 transition-transform duration-300 ease-out">
-                          <Play className="h-5 w-5 fill-current ml-0.5" />
-                        </Button>
+                        <QueueSongButton
+                          songId={item.id}
+                          title={item.attributes?.name || 'Unknown Track'}
+                          artist={item.attributes?.artistName || 'Unknown Artist'}
+                          albumArtwork={item.attributes?.artwork?.url ? formatArtworkUrl(item.attributes.artwork.url) : undefined}
+                          duration={(item.attributes as any)?.durationInMillis ? Math.floor((item.attributes as any).durationInMillis / 1000) : 180}
+                          iconOnly
+                          className="rounded-full h-12 w-12 bg-white/90 hover:bg-white text-black shadow-lg transform scale-0 group-hover:scale-100 transition-transform duration-300 ease-out"
+                        />
                       </div>
                     </>
                   ) : (
@@ -326,7 +332,6 @@ export default function MusicDashboard({ musicData, onLogout }: MusicDashboardPr
                   <div
                     key={result.id}
                     className="flex items-center gap-3 p-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-                    onClick={() => handleResultClick(result)}
                   >
                     <div className="w-10 h-10 relative flex-shrink-0 bg-zinc-200 dark:bg-zinc-700 rounded-md overflow-hidden">
                       {result.attributes?.artwork?.url ? (
@@ -345,10 +350,18 @@ export default function MusicDashboard({ musicData, onLogout }: MusicDashboardPr
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium line-clamp-1">{result.attributes.name}</p>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1">
-                        {result.attributes.artistName}
+                        {result.attributes.artistName || 'Unknown Artist'}
                       </p>
                     </div>
-                    <Play className="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
+                    <QueueSongButton
+                      songId={result.id}
+                      title={result.attributes.name}
+                      artist={result.attributes.artistName || 'Unknown Artist'}
+                      albumArtwork={result.attributes?.artwork?.url ? formatArtworkUrl(result.attributes.artwork.url) : undefined}
+                      duration={(result.attributes as any)?.durationInMillis ? Math.floor((result.attributes as any).durationInMillis / 1000) : 180}
+                      iconOnly
+                      className="w-8 h-8 rounded-full"
+                    />
                   </div>
                 ))}
               </div>
